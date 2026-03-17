@@ -37,6 +37,7 @@ class Portfolio extends Model
     protected static function boot(): void
     {
         parent::boot();
+
         static::creating(function ($model) {
             if (empty($model->slug)) {
                 $model->slug = Str::slug($model->title);
