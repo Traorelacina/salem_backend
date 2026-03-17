@@ -5,23 +5,35 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Portfolio;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PortfolioController extends Controller
 {
     /**
+     * GET /api/v1/portfolio-categories
+     * Retourne les catégories actives pour les filtres publics
+     */
+    public function categories()
+    {
+        $categories = DB::table('portfolio_categories')
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->get(['id', 'name', 'slug']);
+
+        return response()->json(['success' => true, 'data' => $categories]);
+    }
+
+    /**
      * GET /api/v1/portfolio
-     * Retourne toutes les réalisations actives (filtre par catégorie optionnel)
      */
     public function index(Request $request)
     {
         $query = Portfolio::active()->with('images');
 
-        // Filtre par catégorie : ?category=web|mobile|logiciel
         if ($request->filled('category')) {
             $query->where('category', $request->category);
         }
 
-        // Filtre featured uniquement : ?featured=1
         if ($request->boolean('featured')) {
             $query->where('is_featured', true);
         }
@@ -49,15 +61,11 @@ class PortfolioController extends Controller
             ];
         });
 
-        return response()->json([
-            'success' => true,
-            'data'    => $portfolios,
-        ]);
+        return response()->json(['success' => true, 'data' => $portfolios]);
     }
 
     /**
      * GET /api/v1/portfolio/{slug}
-     * Retourne le détail d'une réalisation avec sa galerie
      */
     public function show(string $slug)
     {
