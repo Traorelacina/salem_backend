@@ -6,14 +6,69 @@ use App\Http\Controllers\Controller;
 use App\Models\Portfolio;
 use App\Models\PortfolioImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AdminPortfolioController extends Controller
 {
+    // ══════════════════════════════════════════════════════
+    //  CATÉGORIES
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * GET /api/admin/portfolio-categories
+     */
+    public function categories()
+    {
+        $categories = DB::table('portfolio_categories')
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->get(['id', 'name', 'slug']);
+
+        return response()->json(['success' => true, 'data' => $categories]);
+    }
+
+    /**
+     * POST /api/admin/portfolio-categories
+     */
+    public function storeCategory(Request $request)
+    {
+        $data = $request->validate([
+            'name'  => 'required|string|max:100|unique:portfolio_categories,name',
+            'order' => 'nullable|integer|min:0',
+        ]);
+
+        $id = DB::table('portfolio_categories')->insertGetId([
+            'name'       => $data['name'],
+            'slug'       => Str::slug($data['name']),
+            'order'      => $data['order'] ?? 0,
+            'is_active'  => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data'    => DB::table('portfolio_categories')->find($id),
+        ], 201);
+    }
+
+    /**
+     * DELETE /api/admin/portfolio-categories/{id}
+     */
+    public function destroyCategory(int $id)
+    {
+        DB::table('portfolio_categories')->where('id', $id)->delete();
+        return response()->json(['success' => true]);
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  PORTFOLIO
+    // ══════════════════════════════════════════════════════
+
     /**
      * GET /api/admin/portfolio
-     * Liste toutes les réalisations avec leurs images
      */
     public function index()
     {
@@ -35,7 +90,6 @@ class AdminPortfolioController extends Controller
 
     /**
      * POST /api/admin/portfolio
-     * Créer une nouvelle réalisation
      */
     public function store(Request $request)
     {
@@ -65,15 +119,14 @@ class AdminPortfolioController extends Controller
             $data['cover_image'] = $request->file('cover_image')->store('portfolio/covers', 'public');
         }
 
-        $data['slug']             = $data['slug'] ?? Str::slug($data['title']);
-        $data['order']            = $data['order'] ?? 0;
-        $data['is_active']        = $data['is_active'] ?? true;
-        $data['is_featured']      = $data['is_featured'] ?? false;
-        $data['is_confidential']  = $data['is_confidential'] ?? false;
+        $data['slug']            = $data['slug'] ?? Str::slug($data['title']);
+        $data['order']           = $data['order'] ?? 0;
+        $data['is_active']       = $data['is_active'] ?? true;
+        $data['is_featured']     = $data['is_featured'] ?? false;
+        $data['is_confidential'] = $data['is_confidential'] ?? false;
 
         $portfolio = Portfolio::create($data);
 
-        // Upload galerie d'images
         if ($request->hasFile('gallery')) {
             foreach ($request->file('gallery') as $index => $file) {
                 $path = $file->store('portfolio/gallery', 'public');
@@ -102,7 +155,6 @@ class AdminPortfolioController extends Controller
 
     /**
      * GET /api/admin/portfolio/{portfolio}
-     * Détail d'une réalisation
      */
     public function show(Portfolio $portfolio)
     {
@@ -122,7 +174,6 @@ class AdminPortfolioController extends Controller
 
     /**
      * PUT /api/admin/portfolio/{portfolio}
-     * Mettre à jour une réalisation
      */
     public function update(Request $request, Portfolio $portfolio)
     {
@@ -171,15 +222,14 @@ class AdminPortfolioController extends Controller
 
     /**
      * DELETE /api/admin/portfolio/{portfolio}
-     * Supprimer une réalisation et toutes ses images
      */
     public function destroy(Portfolio $portfolio)
     {
         foreach ($portfolio->images as $img) {
             Storage::disk('public')->delete($img->path);
         }
-        if ($portfolio->cover_image)  Storage::disk('public')->delete($portfolio->cover_image);
-        if ($portfolio->client_logo)  Storage::disk('public')->delete($portfolio->client_logo);
+        if ($portfolio->cover_image) Storage::disk('public')->delete($portfolio->cover_image);
+        if ($portfolio->client_logo) Storage::disk('public')->delete($portfolio->client_logo);
 
         $portfolio->delete();
 
@@ -188,7 +238,6 @@ class AdminPortfolioController extends Controller
 
     /**
      * POST /api/admin/portfolio/{portfolio}/images
-     * Ajouter une image à la galerie d'une réalisation
      */
     public function addImage(Request $request, Portfolio $portfolio)
     {
@@ -216,7 +265,6 @@ class AdminPortfolioController extends Controller
 
     /**
      * DELETE /api/admin/portfolio/images/{image}
-     * Supprimer une image de galerie
      */
     public function deleteImage(PortfolioImage $image)
     {
