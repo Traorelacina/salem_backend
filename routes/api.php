@@ -46,8 +46,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/solutions/{slug}', [SolutionController::class, 'show']);
 
     // Portfolio / Réalisations
-    Route::get('/portfolio',        [PortfolioController::class, 'index']);
-    Route::get('/portfolio/{slug}', [PortfolioController::class, 'show']);
+    Route::get('/portfolio',             [PortfolioController::class, 'index']);
+    Route::get('/portfolio/{slug}',      [PortfolioController::class, 'show']);
+    Route::get('/portfolio-categories',  [PortfolioController::class, 'categories']); // ✅ propre
 
     // News / Articles
     Route::get('/news',        [NewsController::class, 'index']);
@@ -87,9 +88,15 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/portfolio/{portfolio}',        [AdminPortfolioController::class, 'show']);
     Route::put('/portfolio/{portfolio}',        [AdminPortfolioController::class, 'update']);
     Route::delete('/portfolio/{portfolio}',     [AdminPortfolioController::class, 'destroy']);
+
+    // Catégories portfolio ✅ — sans /admin/ devant, le préfixe est déjà appliqué
+    Route::get('/portfolio-categories',         [AdminPortfolioController::class, 'categories']);
+    Route::post('/portfolio-categories',        [AdminPortfolioController::class, 'storeCategory']);
+    Route::delete('/portfolio-categories/{id}', [AdminPortfolioController::class, 'destroyCategory']);
+
     // Galerie d'images
-    Route::post('/portfolio/{portfolio}/images',  [AdminPortfolioController::class, 'addImage']);
-    Route::delete('/portfolio/images/{image}',    [AdminPortfolioController::class, 'deleteImage']);
+    Route::post('/portfolio/{portfolio}/images', [AdminPortfolioController::class, 'addImage']);
+    Route::delete('/portfolio/images/{image}',   [AdminPortfolioController::class, 'deleteImage']);
 
     // ── News ──────────────────────────────────────────────────
     Route::get('/news',                         [AdminNewsController::class, 'index']);
