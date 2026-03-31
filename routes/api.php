@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\AdminPortfolioController;
 use App\Http\Controllers\Admin\AdminNewsController;
 use App\Http\Controllers\Admin\AdminContactController;
 use App\Http\Controllers\Admin\AdminClientController;
+use App\Http\Controllers\Admin\AdminSocialController;
 
 
 // ════════════════════════════════════════════════════════════════
@@ -48,7 +49,7 @@ Route::prefix('v1')->group(function () {
     // Portfolio / Réalisations
     Route::get('/portfolio',             [PortfolioController::class, 'index']);
     Route::get('/portfolio/{slug}',      [PortfolioController::class, 'show']);
-    Route::get('/portfolio-categories',  [PortfolioController::class, 'categories']); // ✅ propre
+    Route::get('/portfolio-categories',  [PortfolioController::class, 'categories']);
 
     // News / Articles
     Route::get('/news',        [NewsController::class, 'index']);
@@ -59,6 +60,9 @@ Route::prefix('v1')->group(function () {
 
     // Formulaire de contact
     Route::post('/contact', [ContactController::class, 'store']);
+
+    // Réseaux sociaux (Footer)
+    Route::get('/socials', [AdminSocialController::class, 'index']);
 });
 
 
@@ -89,7 +93,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::put('/portfolio/{portfolio}',        [AdminPortfolioController::class, 'update']);
     Route::delete('/portfolio/{portfolio}',     [AdminPortfolioController::class, 'destroy']);
 
-    // Catégories portfolio ✅ — sans /admin/ devant, le préfixe est déjà appliqué
+    // Catégories portfolio
     Route::get('/portfolio-categories',         [AdminPortfolioController::class, 'categories']);
     Route::post('/portfolio-categories',        [AdminPortfolioController::class, 'storeCategory']);
     Route::delete('/portfolio-categories/{id}', [AdminPortfolioController::class, 'destroyCategory']);
@@ -119,4 +123,10 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::put('/clients/{client}',             [AdminClientController::class, 'update']);
     Route::delete('/clients/{client}',          [AdminClientController::class, 'destroy']);
     Route::post('/clients/reorder',             [AdminClientController::class, 'reorder']);
+
+    // ── Réseaux sociaux ───────────────────────────────────────
+    Route::get('/socials',          [AdminSocialController::class, 'adminIndex']);
+    Route::post('/socials',         [AdminSocialController::class, 'store']);
+    Route::put('/socials/{social}', [AdminSocialController::class, 'update']);
+    Route::delete('/socials/{social}', [AdminSocialController::class, 'destroy']);
 });
