@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Social;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminSocialController extends Controller
 {
-    // ── PUBLIC ──────────────────────────────────────────────
+    // ── PUBLIC ───────────────────────────────────────────────
     // GET /api/v1/socials  → utilisé par le Footer React
     public function index(): JsonResponse
     {
@@ -23,7 +24,7 @@ class AdminSocialController extends Controller
         ]);
     }
 
-    // ── ADMIN ────────────────────────────────────────────────
+    // ── ADMIN ─────────────────────────────────────────────────
     // GET /api/admin/socials
     public function adminIndex(): JsonResponse
     {
@@ -38,22 +39,24 @@ class AdminSocialController extends Controller
     // POST /api/admin/socials
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $request->validate([
             'name'      => 'required|string|max:60',
-            'icon'      => 'required|string|max:40',
+            'icon'      => 'required|file|mimes:png,jpg,jpeg,svg,webp|max:2048',
             'url'       => 'required|url|max:500',
             'color'     => 'nullable|string|max:20',
             'order'     => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
         ]);
 
+        $iconPath = $request->file('icon')->store('socials', 'public');
+
         $social = Social::create([
-            'name'      => $validated['name'],
-            'icon'      => $validated['icon'],
-            'url'       => $validated['url'],
-            'color'     => $validated['color'] ?? null,
-            'order'     => $validated['order'] ?? 0,
-            'is_active' => $validated['is_active'] ?? true,
+            'name'      => $request->name,
+            'icon_path' => $iconPath,
+            'url'       => $request->url,
+            'color'     => $request->color,
+            'order'     => $request->order ?? 0,
+            'is_active' => filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) ?? true,
         ]);
 
         return response()->json([
@@ -66,16 +69,27 @@ class AdminSocialController extends Controller
     // PUT /api/admin/socials/{social}
     public function update(Request $request, Social $social): JsonResponse
     {
-        $validated = $request->validate([
+        $request->validate([
             'name'      => 'sometimes|required|string|max:60',
-            'icon'      => 'sometimes|required|string|max:40',
+            'icon'      => 'nullable|file|mimes:png,jpg,jpeg,svg,webp|max:2048',
             'url'       => 'sometimes|required|url|max:500',
             'color'     => 'nullable|string|max:20',
             'order'     => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
         ]);
 
-        $social->update($validated);
+        $data = $request->only(['name', 'url', 'color', 'order']);
+        $data['is_active'] = filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN);
+
+        // Si une nouvelle icône est uploadée, remplacer l'ancienne
+        if ($request->hasFile('icon')) {
+            if ($social->icon_path) {
+                Storage::disk('public')->delete($social->icon_path);
+            }
+            $data['icon_path'] = $request->file('icon')->store('socials', 'public');
+        }
+
+        $social->update($data);
 
         return response()->json([
             'success' => true,
@@ -87,6 +101,11 @@ class AdminSocialController extends Controller
     // DELETE /api/admin/socials/{social}
     public function destroy(Social $social): JsonResponse
     {
+        // Supprimer le fichier image associé
+        if ($social->icon_path) {
+            Storage::disk('public')->delete($social->icon_path);
+        }
+
         $social->delete();
 
         return response()->json([
